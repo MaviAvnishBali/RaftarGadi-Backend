@@ -5,6 +5,7 @@ import { RegisterDriverDto } from '../dto/register-driver.dto';
 import { UpdateDriverDto } from '../dto/update-driver.dto';
 import { UploadDocumentDto } from '../dto/upload-document.dto';
 import { DriverQueryDto } from '../dto/driver-query.dto';
+import { VerifyLicenseDto } from '../dto/verify-license.dto';
 import { Roles, Permissions, CurrentUser } from '../../../common/decorators';
 import { Role, Permission } from '../../../common/enums';
 
@@ -56,6 +57,13 @@ export class DriversController {
   @ApiOperation({ summary: 'Upload document' })
   uploadDocument(@CurrentUser('sub') driverId: string, @Body() dto: UploadDocumentDto) {
     return this.driversService.uploadDocument(driverId, dto);
+  }
+
+  @Post('verify-license')
+  @Roles(Role.DRIVER)
+  @ApiOperation({ summary: 'Verify and save driving license' })
+  verifyLicense(@CurrentUser('sub') userId: string, @Body() dto: VerifyLicenseDto) {
+    return this.driversService.verifyAndSaveLicense(userId, dto.licenseNumber);
   }
 
   @Get()

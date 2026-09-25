@@ -6,12 +6,16 @@ import { UpdateDriverDto } from '../dto/update-driver.dto';
 import { UploadDocumentDto } from '../dto/upload-document.dto';
 import { DriverQueryDto } from '../dto/driver-query.dto';
 import { AppException } from '../../../common/exceptions/app.exception';
+import { KycVerificationService } from './kyc-verification.service';
 
 @Injectable()
 export class DriversService {
   private readonly logger = new Logger(DriversService.name);
 
-  constructor(private readonly driversRepo: DriversRepository) {}
+  constructor(
+    private readonly driversRepo: DriversRepository,
+    private readonly kycVerificationService: KycVerificationService,
+  ) {}
 
   async getProfile(userId: string) {
     const driver = await this.driversRepo.findByUserId(userId);
@@ -70,5 +74,25 @@ export class DriversService {
 
   async updateRating(driverId: string, newRating: number) {
     await this.driversRepo.update(driverId, { rating: newRating });
+  }
+
+  async verifyAndSaveLicense(userId: string, licenseNumber: string) {
+    const driver = await this.getProfile(userId);
+    
+    // Call 3rd-party validation mock
+    const result = await this.kycVerificationService.verifyDrivingLicense(licenseNumber);
+    
+    if (result.isValid) {
+      await this.driversRepo.update(driver.id, {
+        licenseNumber,
+        kycStatus: 'SUBMITTED', // Or whatever transition makes sense
+      });
+      
+      return {
+        success: true,
+        message: 'Driving license verified successfully',
+        details: result,
+      };
+    }
   }
 }
