@@ -1,0 +1,25 @@
+name: repositories
+description: Raftar Gaddi — repository contracts and mock-backed implementations.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.44.0"
+
+resolution: workspace
+
+dependencies:
+  core:
+    path: ../core
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.3.2
+  shared_models:
+    path: ../shared_models
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mock_data:
+    path: ../mock_data

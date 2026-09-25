@@ -1,0 +1,10 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # Serialize nested model objects via their own toJson() rather than
+          # embedding the raw instance — required for models that nest other
+          # models (Booking -> Address/FareEstimate, Trip -> TripEvent, etc.).
+          explicit_to_json: true
+          field_rename: none

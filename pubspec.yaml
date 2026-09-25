@@ -1,0 +1,45 @@
+name: raftar_gaddi_workspace
+description: Raftar Gaddi — production-grade logistics platform monorepo (customer, driver, admin).
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+# Dart pub workspace: one shared lockfile + single version resolution across all members.
+workspace:
+  - apps/customer_app
+  - apps/driver_app
+  - apps/admin_app
+  - packages/core
+  - packages/shared_models
+  - packages/design_system
+  - packages/shared_widgets
+  - packages/storage
+  - packages/mock_data
+  - packages/repositories
+  - packages/localization
+  - packages/api_client
+
+dev_dependencies:
+  melos: ^8.0.0
+  very_good_analysis: ^10.0.0
+
+melos:
+  scripts:
+    analyze:
+      description: Analyze all packages and apps.
+      run: dart analyze --fatal-infos
+
+    format:
+      description: Format all Dart code, failing on changes.
+      run: dart format --set-exit-if-changed .
+
+    test:
+      description: Run tests across every package that has them.
+      run: melos exec --dir-exists="test" -- flutter test
+      packageFilters:
+        dirExists: test
+
+    gen:
+      description: Run build_runner codegen in every package that needs it.
+      run: melos exec --depends-on="build_runner" -- dart run build_runner build

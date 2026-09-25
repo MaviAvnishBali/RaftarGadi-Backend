@@ -1,0 +1,61 @@
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_TripEvent _$TripEventFromJson(Map<String, dynamic> json) => _TripEvent(
+  status: $enumDecode(_$TripStatusEnumMap, json['status']),
+  timestamp: DateTime.parse(json['timestamp'] as String),
+  note: json['note'] as String?,
+);
+
+Map<String, dynamic> _$TripEventToJson(_TripEvent instance) =>
+    <String, dynamic>{
+      'status': _$TripStatusEnumMap[instance.status]!,
+      'timestamp': instance.timestamp.toIso8601String(),
+      'note': instance.note,
+    };
+
+const _$TripStatusEnumMap = {
+  TripStatus.assigned: 'assigned',
+  TripStatus.headingToPickup: 'headingToPickup',
+  TripStatus.atPickup: 'atPickup',
+  TripStatus.goodsLoaded: 'goodsLoaded',
+  TripStatus.inTransit: 'inTransit',
+  TripStatus.atDrop: 'atDrop',
+  TripStatus.completed: 'completed',
+  TripStatus.cancelled: 'cancelled',
+};
+
+_Trip _$TripFromJson(Map<String, dynamic> json) => _Trip(
+  id: json['id'] as String,
+  bookingId: json['bookingId'] as String,
+  driverId: json['driverId'] as String,
+  status:
+      $enumDecodeNullable(_$TripStatusEnumMap, json['status']) ??
+      TripStatus.assigned,
+  driverLocation: json['driverLocation'] == null
+      ? null
+      : GeoPoint.fromJson(json['driverLocation'] as Map<String, dynamic>),
+  events:
+      (json['events'] as List<dynamic>?)
+          ?.map((e) => TripEvent.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <TripEvent>[],
+  startedAt: json['startedAt'] == null
+      ? null
+      : DateTime.parse(json['startedAt'] as String),
+  completedAt: json['completedAt'] == null
+      ? null
+      : DateTime.parse(json['completedAt'] as String),
+);
+
+Map<String, dynamic> _$TripToJson(_Trip instance) => <String, dynamic>{
+  'id': instance.id,
+  'bookingId': instance.bookingId,
+  'driverId': instance.driverId,
+  'status': _$TripStatusEnumMap[instance.status]!,
+  'driverLocation': instance.driverLocation?.toJson(),
+  'events': instance.events.map((e) => e.toJson()).toList(),
+  'startedAt': instance.startedAt?.toIso8601String(),
+  'completedAt': instance.completedAt?.toIso8601String(),
+};

@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://raftargadi:raftargadi_prod@postgres:5432/raftargadi?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - raftargadi-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ['node', 'dist/jobs/worker']
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://raftargadi:raftargadi_prod@postgres:5432/raftargadi?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - raftargadi-network
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: raftargadi
+      POSTGRES_PASSWORD: raftargadi_prod
+      POSTGRES_DB: raftargadi
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U raftargadi']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - raftargadi-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - raftargadi-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  raftargadi-network:
+    driver: bridge

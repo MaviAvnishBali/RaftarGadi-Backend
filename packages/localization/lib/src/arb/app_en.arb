@@ -1,0 +1,24 @@
+{
+  "@@locale": "en",
+  "appName": "Raftar Gaddi",
+  "tagline": "Har Load, Hamari Zimmedaari",
+  "greeting": "Hello, {name}",
+  "@greeting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "actionRetry": "Try again",
+  "actionCancel": "Cancel",
+  "actionConfirm": "Confirm",
+  "actionSave": "Save",
+  "actionSearch": "Search",
+  "navHome": "Home",
+  "navBookings": "Bookings",
+  "navWallet": "Wallet",
+  "navProfile": "Profile",
+  "bookNow": "Book now",
+  "fareEstimate": "Estimated fare",
+  "pickupHint": "Pickup location",
+  "dropHint": "Drop location"
+}

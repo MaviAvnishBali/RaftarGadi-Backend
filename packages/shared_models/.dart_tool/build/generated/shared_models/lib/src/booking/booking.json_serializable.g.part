@@ -1,0 +1,56 @@
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_Booking _$BookingFromJson(Map<String, dynamic> json) => _Booking(
+  id: json['id'] as String,
+  customerId: json['customerId'] as String,
+  vehicleType: $enumDecode(_$VehicleTypeEnumMap, json['vehicleType']),
+  pickup: Address.fromJson(json['pickup'] as Map<String, dynamic>),
+  drop: Address.fromJson(json['drop'] as Map<String, dynamic>),
+  fare: FareEstimate.fromJson(json['fare'] as Map<String, dynamic>),
+  createdAt: DateTime.parse(json['createdAt'] as String),
+  status:
+      $enumDecodeNullable(_$BookingStatusEnumMap, json['status']) ??
+      BookingStatus.draft,
+  driverId: json['driverId'] as String?,
+  tripId: json['tripId'] as String?,
+  couponCode: json['couponCode'] as String?,
+  note: json['note'] as String?,
+  scheduledAt: json['scheduledAt'] == null
+      ? null
+      : DateTime.parse(json['scheduledAt'] as String),
+);
+
+Map<String, dynamic> _$BookingToJson(_Booking instance) => <String, dynamic>{
+  'id': instance.id,
+  'customerId': instance.customerId,
+  'vehicleType': _$VehicleTypeEnumMap[instance.vehicleType]!,
+  'pickup': instance.pickup.toJson(),
+  'drop': instance.drop.toJson(),
+  'fare': instance.fare.toJson(),
+  'createdAt': instance.createdAt.toIso8601String(),
+  'status': _$BookingStatusEnumMap[instance.status]!,
+  'driverId': instance.driverId,
+  'tripId': instance.tripId,
+  'couponCode': instance.couponCode,
+  'note': instance.note,
+  'scheduledAt': instance.scheduledAt?.toIso8601String(),
+};
+
+const _$VehicleTypeEnumMap = {
+  VehicleType.bike: 'bike',
+  VehicleType.auto: 'auto',
+  VehicleType.miniTruck: 'miniTruck',
+  VehicleType.truck: 'truck',
+};
+
+const _$BookingStatusEnumMap = {
+  BookingStatus.draft: 'draft',
+  BookingStatus.searching: 'searching',
+  BookingStatus.driverAssigned: 'driverAssigned',
+  BookingStatus.arrivingPickup: 'arrivingPickup',
+  BookingStatus.inTransit: 'inTransit',
+  BookingStatus.completed: 'completed',
+  BookingStatus.cancelled: 'cancelled',
+};
