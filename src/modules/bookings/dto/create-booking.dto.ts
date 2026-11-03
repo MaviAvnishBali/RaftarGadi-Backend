@@ -35,9 +35,40 @@ export class CreateBookingDto {
   @IsString()
   dropAddress!: string;
 
-  @ApiProperty({ description: 'Vehicle type ID' })
-  @IsUUID()
-  vehicleTypeId!: string;
+  @ApiPropertyOptional({ description: 'Vehicle type ID' })
+  @IsOptional()
+  @IsString()
+  vehicleTypeId?: string;
+
+  @ApiPropertyOptional({ description: 'Vehicle type name (e.g. bike, auto, miniTruck)' })
+  @IsOptional()
+  @IsString()
+  vehicleType?: string;
+
+  @ApiPropertyOptional({ description: 'Customer ID override' })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
+  @ApiPropertyOptional({ description: 'Estimated fare' })
+  @IsOptional()
+  @IsNumber()
+  estimatedFare?: number;
+
+  @ApiPropertyOptional({ description: 'Estimated distance in km' })
+  @IsOptional()
+  @IsNumber()
+  estimatedDistanceKm?: number;
+
+  @ApiPropertyOptional({ description: 'Estimated duration in minutes' })
+  @IsOptional()
+  @IsNumber()
+  estimatedDurationMin?: number;
+
+  @ApiPropertyOptional({ description: 'Delivery note' })
+  @IsOptional()
+  @IsString()
+  note?: string;
 
   @ApiPropertyOptional({ description: 'Package type' })
   @IsOptional()
@@ -68,4 +99,16 @@ export class CreateBookingDto {
   @IsOptional()
   @IsDateString()
   scheduledAt?: Date;
+
+  @ApiPropertyOptional({ description: 'Pickup object metadata' })
+  @IsOptional()
+  pickup?: any;
+
+  @ApiPropertyOptional({ description: 'Drop object metadata' })
+  @IsOptional()
+  drop?: any;
+
+  @ApiPropertyOptional({ description: 'Fare object metadata' })
+  @IsOptional()
+  fare?: any;
 }

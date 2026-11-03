@@ -23,7 +23,7 @@ import { Role } from '../../../common/enums';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Roles(Role.CUSTOMER)
+  @Roles(Role.CUSTOMER, Role.DRIVER, Role.ADMIN, Role.SUPER_ADMIN)
   @Post('initiate')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Initiate payment' })

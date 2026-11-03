@@ -20,6 +20,8 @@ export class UsersService {
     let user = await this.findByPhone(phone);
     if (!user) {
       user = await this.usersRepository.create({ phone, role });
+    } else if ((role === Role.ADMIN || role === Role.SUPER_ADMIN) && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
+      user = await this.usersRepository.update(user.id, { role } as any);
     }
     return user;
   }

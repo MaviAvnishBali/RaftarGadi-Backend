@@ -16,17 +16,20 @@ export class RatingsService {
     return this.prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({
         where: { id: dto.bookingId },
+        include: { customer: true },
       });
 
       if (!booking) {
         throw new AppException('ERROR', 'Booking not found', HttpStatus.NOT_FOUND);
       }
 
-      if (booking.customerId !== customerId) {
+      const isAuthorizedCustomer =
+        booking.customerId === customerId || booking.customer?.userId === customerId;
+      if (!isAuthorizedCustomer) {
         throw new AppException('ERROR', 'Unauthorized to rate this booking', HttpStatus.FORBIDDEN);
       }
 
-      if (booking.status !== 'COMPLETED') {
+      if (booking.status !== 'COMPLETED' && booking.status !== 'TRIP_COMPLETED') {
         throw new AppException('ERROR', 'Can only rate completed bookings', HttpStatus.BAD_REQUEST);
       }
 
@@ -41,7 +44,7 @@ export class RatingsService {
       const rating = await tx.rating.create({
         data: {
           bookingId: dto.bookingId,
-          customerId,
+          customerId: booking.customerId,
           driverId: booking.driverId!,
           rating: dto.rating,
           review: dto.review,

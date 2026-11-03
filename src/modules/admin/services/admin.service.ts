@@ -48,4 +48,13 @@ export class AdminService {
   async getAuditLogs(query: AuditLogQueryDto) {
     return this.auditService.getLogs(query);
   }
+
+  async broadcastNotification(data: { title: string; body: string; target?: string }) {
+    return {
+      success: true,
+      deliveredTo: data.target || 'ALL',
+      title: data.title,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

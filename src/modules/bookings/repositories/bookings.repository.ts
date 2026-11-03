@@ -9,8 +9,8 @@ export class BookingsRepository {
     return this.prisma.booking.create({
       data,
       include: {
-        customer: true,
-        driver: true,
+        customer: { include: { user: true } },
+        driver: { include: { user: true, vehicle: true } },
         vehicleType: true,
         statusHistory: true,
       },
@@ -18,11 +18,13 @@ export class BookingsRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.booking.findUnique({
-      where: { id },
+    return this.prisma.booking.findFirst({
+      where: {
+        OR: [{ id }, { bookingNumber: id }],
+      },
       include: {
-        customer: true,
-        driver: true,
+        customer: { include: { user: true } },
+        driver: { include: { user: true, vehicle: true } },
         vehicleType: true,
         statusHistory: {
           orderBy: { createdAt: 'asc' },
@@ -35,8 +37,8 @@ export class BookingsRepository {
     return this.prisma.booking.findUnique({
       where: { bookingNumber },
       include: {
-        customer: true,
-        driver: true,
+        customer: { include: { user: true } },
+        driver: { include: { user: true, vehicle: true } },
         vehicleType: true,
         statusHistory: {
           orderBy: { createdAt: 'asc' },
@@ -49,8 +51,8 @@ export class BookingsRepository {
     return this.prisma.booking.findMany({
       ...params,
       include: {
-        customer: true,
-        driver: true,
+        customer: { include: { user: true } },
+        driver: { include: { user: true, vehicle: true } },
         vehicleType: true,
       },
     });
@@ -65,8 +67,8 @@ export class BookingsRepository {
       where: { id },
       data,
       include: {
-        customer: true,
-        driver: true,
+        customer: { include: { user: true } },
+        driver: { include: { user: true, vehicle: true } },
         vehicleType: true,
         statusHistory: {
           orderBy: { createdAt: 'asc' },

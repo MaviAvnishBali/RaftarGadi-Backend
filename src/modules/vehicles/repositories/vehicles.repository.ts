@@ -21,8 +21,9 @@ export class VehiclesRepository {
       data: {
         driverId,
         vehicleTypeId: dto.vehicleTypeId,
-        registrationNumber: dto.registrationNumber,
+        registrationNumber: dto.registrationNumber.toUpperCase().trim(),
         model: dto.model,
+        bodyType: dto.bodyType,
         color: dto.color,
         manufactureYear: dto.manufactureYear,
       },

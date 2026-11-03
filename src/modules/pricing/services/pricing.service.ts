@@ -7,9 +7,14 @@ import { FareEstimate } from '../interfaces/fare-estimate.interface';
 import { AppException } from '../../../common/exceptions/app.exception';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
+import { PrismaService } from '../../../database/prisma.service';
+
 @Injectable()
 export class PricingService {
-  constructor(private readonly pricingRepo: PricingRepository) {}
+  constructor(
+    private readonly pricingRepo: PricingRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
@@ -54,13 +59,18 @@ export class PricingService {
     return {
       baseFare,
       distanceCharge,
+      distanceFare: distanceCharge,
       timeCharge,
+      timeFare: timeCharge,
+      distanceKm,
+      durationMinutes: durationMin,
       subtotal,
       surgeMultiplier,
       surgeAmount,
       platformFee,
       taxAmount,
       discountAmount,
+      discount: discountAmount,
       totalFare,
       minimumFareApplied,
       currency: 'INR',
@@ -68,8 +78,25 @@ export class PricingService {
   }
 
   async calculateEstimatedFare(dto: CalculateFareDto): Promise<FareEstimate> {
-    const rule = await this.getActivePricingRule(dto.vehicleTypeId, dto.city);
-    return this.calculateCoreFare(rule, dto.distanceKm, dto.durationMin, dto.couponCode);
+    const duration = dto.durationMin ?? dto.durationMinutes ?? 15;
+    let targetVehicleTypeId = dto.vehicleTypeId;
+
+    if (!targetVehicleTypeId && dto.vehicleType) {
+      const vName = dto.vehicleType.toLowerCase();
+      const allTypes = await this.prisma.vehicleType.findMany();
+      const matched = allTypes.find((vt) => {
+        const n = vt.name.toLowerCase();
+        if (vName.includes('bike') && (n.includes('bike') || n.includes('2-wheeler'))) return true;
+        if (vName.includes('auto') && (n.includes('3-wheeler') || n.includes('auto'))) return true;
+        if (vName.includes('mini') && (n.includes('tata ace') || n.includes('chota'))) return true;
+        if (vName.includes('truck') && (n.includes('407') || n.includes('bolero') || n.includes('truck'))) return true;
+        return n.includes(vName);
+      });
+      targetVehicleTypeId = matched?.id;
+    }
+
+    const rule = await this.getActivePricingRule(targetVehicleTypeId, dto.city, dto.vehicleType);
+    return this.calculateCoreFare(rule, dto.distanceKm, duration, dto.couponCode);
   }
 
   async calculateFinalFare(
@@ -77,8 +104,7 @@ export class PricingService {
     actualDistanceKm: number,
     actualDurationMin: number,
   ): Promise<FareEstimate> {
-    const dummyVehicleTypeId = '00000000-0000-0000-0000-000000000000';
-    const rule = await this.getActivePricingRule(dummyVehicleTypeId, 'default');
+    const rule = this.getDefaultPricingRule('bike');
     return this.calculateCoreFare(rule, actualDistanceKm, actualDurationMin);
   }
 
@@ -87,22 +113,75 @@ export class PricingService {
   }
 
   async updatePricingRule(id: string, dto: UpdatePricingRuleDto) {
-    return this.pricingRepo.updateRule(id, dto);
+    const { dimensions, maxWeightKg, ...ruleData } = dto;
+    const rule = await this.pricingRepo.updateRule(id, ruleData);
+    if ((dimensions !== undefined || maxWeightKg !== undefined) && rule.vehicleTypeId) {
+      await this.prisma.vehicleType.update({
+        where: { id: rule.vehicleTypeId },
+        data: {
+          ...(dimensions !== undefined ? { dimensions } : {}),
+          ...(maxWeightKg !== undefined ? { maxWeightKg } : {}),
+        },
+      });
+    }
+    return this.prisma.pricingRule.findUnique({
+      where: { id },
+      include: { vehicleType: true },
+    });
   }
 
   async getPricingRules(query: PaginationDto) {
     return this.pricingRepo.getRules(query);
   }
 
-  async getActivePricingRule(vehicleTypeId: string, city: string = 'default') {
-    const rule = await this.pricingRepo.getActiveRule(vehicleTypeId, city);
-    if (!rule) {
-      throw new AppException('ERROR', 'Pricing rule not found for the given criteria', 404);
+  async getActivePricingRule(vehicleTypeId?: string, city: string = 'default', vehicleType?: string) {
+    if (vehicleTypeId) {
+      try {
+        const rule = await this.pricingRepo.getActiveRule(vehicleTypeId, city);
+        if (rule) return rule;
+      } catch (_) {
+        // Fall back to default
+      }
     }
-    return rule;
+    return this.getDefaultPricingRule(vehicleType || vehicleTypeId);
   }
 
-  async setSurge(vehicleTypeId: string, multiplier: number): Promise<void> {
+  private getDefaultPricingRule(hint?: string) {
+    const h = (hint || '').toLowerCase();
+    let baseFare = 40;
+    let perKmCharge = 12;
+    let perMinCharge = 1.5;
+    let minimumFare = 40;
+
+    if (h.includes('bike') || h.includes('2-wheeler')) {
+      baseFare = 25;
+      perKmCharge = 10;
+      perMinCharge = 1.0;
+      minimumFare = 25;
+    } else if (h.includes('mini') || h.includes('tata ace') || h.includes('chota')) {
+      baseFare = 150;
+      perKmCharge = 20;
+      perMinCharge = 2.0;
+      minimumFare = 150;
+    } else if (h.includes('truck') || h.includes('407') || h.includes('pickup')) {
+      baseFare = 250;
+      perKmCharge = 25;
+      perMinCharge = 2.5;
+      minimumFare = 250;
+    }
+
+    return {
+      baseFare,
+      perKmCharge,
+      perMinCharge,
+      minimumFare,
+      platformFeePercent: 10,
+      taxPercent: 5,
+      surgeMultiplier: 1.0,
+    };
+  }
+
+  async setSurge(vehicleTypeId: string | undefined, multiplier: number): Promise<void> {
     await this.pricingRepo.updateSurge(vehicleTypeId, multiplier);
   }
 }

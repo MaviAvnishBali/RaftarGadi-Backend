@@ -30,7 +30,11 @@ export class RolesGuard implements CanActivate {
       throw AppException.unauthorized();
     }
 
-    const hasRole = requiredRoles.some((role) => user.role === role);
+    const hasRole = requiredRoles.some(
+      (role) =>
+        user.role === role ||
+        (role === Role.ADMIN && user.role === Role.SUPER_ADMIN),
+    );
     if (!hasRole) {
       throw AppException.forbidden();
     }

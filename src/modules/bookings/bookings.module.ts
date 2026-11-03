@@ -5,8 +5,10 @@ import { BookingStateMachineService } from './services/booking-state-machine.ser
 import { DriverMatchingService } from './services/driver-matching.service';
 import { BookingsRepository } from './repositories/bookings.repository';
 
+import { ServiceableAreasModule } from '../serviceable-areas/serviceable-areas.module';
+
 @Module({
-  imports: [],
+  imports: [ServiceableAreasModule],
   controllers: [BookingsController],
   providers: [
     BookingsService,

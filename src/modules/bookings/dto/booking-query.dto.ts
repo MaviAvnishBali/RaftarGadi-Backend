@@ -1,18 +1,23 @@
-import { IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsEnum, IsDateString, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { BookingStatus } from '../enums/booking-status.enum';
 
 export class BookingQueryDto extends PaginationDto {
-  @ApiPropertyOptional({ enum: BookingStatus })
+  @ApiPropertyOptional({ description: 'Booking status or group (IN_TRANSIT, PENDING, COMPLETED, CANCELLED, etc.)' })
   @IsOptional()
-  @IsEnum(BookingStatus)
-  status?: BookingStatus;
+  @IsString()
+  status?: string;
 
   @ApiPropertyOptional({ description: 'From date (ISO string)' })
   @IsOptional()
   @IsDateString()
   from?: string;
+
+  @ApiPropertyOptional({ description: 'Customer ID' })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 
   @ApiPropertyOptional({ description: 'To date (ISO string)' })
   @IsOptional()

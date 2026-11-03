@@ -4,10 +4,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class DriverQueryDto extends PaginationDto {
-  @ApiPropertyOptional({ enum: DriverStatus })
-  @IsEnum(DriverStatus)
+  @ApiPropertyOptional({ description: 'Driver status (OFFLINE, ONLINE, BUSY, SUSPENDED, ACTIVE, PENDING_KYC, ALL)' })
+  @IsString()
   @IsOptional()
-  status?: DriverStatus;
+  status?: string;
 
   @ApiPropertyOptional({ enum: KycStatus })
   @IsEnum(KycStatus)

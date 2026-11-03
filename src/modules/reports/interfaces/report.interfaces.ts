@@ -7,7 +7,11 @@ export interface DashboardStats {
   completedBookings: number;
   cancelledBookings: number;
   totalRevenue: number;
+  todayRevenue?: number;
   pendingKyc: number;
+  pendingVerifications?: number;
+  completionRate?: number;
+  averageRating?: number;
   openTickets: number;
 }
 
@@ -16,6 +20,9 @@ export interface RevenueReport {
   totalTrips: number;
   averageFare: number;
   totalPlatformFees: number;
+  platformCommission?: number;
+  driverPayouts?: number;
+  dailyStats?: Array<{ date: string; amount: number }>;
   revenueByVehicleType: Array<{ vehicleType: string; revenue: number; trips: number }>;
 }
 

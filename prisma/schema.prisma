@@ -163,6 +163,7 @@ model User {
   notifications Notification[]
   supportTicketsCreated  SupportTicket[] @relation("TicketCreator")
   supportTicketsAssigned SupportTicket[] @relation("TicketAssignee")
+  supportMessages        SupportMessage[]
   auditLogs     AuditLog[]
 
   @@index([role])
@@ -213,8 +214,18 @@ model Driver {
   userId        String       @unique @map("user_id") @db.Uuid
   status        DriverStatus @default(OFFLINE)
   kycStatus     KycStatus    @default(PENDING) @map("kyc_status")
-  licenseNumber String?      @unique @map("license_number") @db.VarChar(50)
-  avgRating     Float        @default(0) @map("avg_rating")
+  licenseNumber        String?      @unique @map("license_number") @db.VarChar(50)
+  dob                  DateTime?    @map("dob")
+  licenseExpiry        DateTime?    @map("license_expiry")
+  aadhaarNumber        String?      @map("aadhaar_number") @db.VarChar(20)
+  maskedAadhaar        String?      @map("masked_aadhaar") @db.VarChar(20)
+  aadhaarName          String?      @map("aadhaar_name") @db.VarChar(255)
+  isLicenseVerified    Boolean      @default(false) @map("is_license_verified")
+  isAadhaarVerified    Boolean      @default(false) @map("is_aadhaar_verified")
+  kycSubmittedAt       DateTime?    @map("kyc_submitted_at")
+  kycVerifiedAt        DateTime?    @map("kyc_verified_at")
+  kycProviderReference String?      @map("kyc_provider_reference") @db.VarChar(100)
+  avgRating            Float        @default(0) @map("avg_rating")
   totalTrips    Int          @default(0) @map("total_trips")
   isAvailable   Boolean      @default(false) @map("is_available")
   createdAt     DateTime     @default(now()) @map("created_at")
@@ -279,6 +290,11 @@ model Vehicle {
   model              String?  @db.VarChar(100)
   color              String?  @db.VarChar(50)
   manufactureYear    Int?     @map("manufacture_year")
+  bodyType           String?  @map("body_type") @db.VarChar(50)
+  isCommercial       Boolean  @default(true) @map("is_commercial")
+  rcExpiry           DateTime? @map("rc_expiry")
+  insuranceExpiry    DateTime? @map("insurance_expiry")
+  fitnessExpiry      DateTime? @map("fitness_expiry")
   isActive           Boolean  @default(true) @map("is_active")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -582,13 +598,32 @@ model SupportTicket {
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
-  user     User  @relation("TicketCreator", fields: [userId], references: [id])
-  assignee User? @relation("TicketAssignee", fields: [assignedTo], references: [id])
+  user     User             @relation("TicketCreator", fields: [userId], references: [id])
+  assignee User?            @relation("TicketAssignee", fields: [assignedTo], references: [id])
+  messages SupportMessage[]
 
   @@index([userId])
   @@index([status])
   @@index([priority])
   @@map("support_tickets")
+}
+
+model SupportMessage {
+  id         String   @id @default(uuid()) @db.Uuid
+  ticketId   String   @map("ticket_id") @db.Uuid
+  senderId   String?  @map("sender_id") @db.Uuid
+  senderRole String   @default("CUSTOMER") @map("sender_role") @db.VarChar(50)
+  message    String   @db.Text
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User?          @relation(fields: [senderId], references: [id])
+
+  @@index([ticketId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("support_messages")
 }
 
 // ─── Audit Logs ───────────────────────────────────────────
@@ -627,4 +662,22 @@ model IdempotencyKey {
 
   @@index([expiresAt])
   @@map("idempotency_keys")
+}
+
+// ─── Serviceable Operational Areas ───────────────────────
+
+model ServiceableArea {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  state     String   @db.VarChar(100)
+  centerLat Float    @map("center_lat")
+  centerLng Float    @map("center_lng")
+  radiusKm  Float    @map("radius_km")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([name])
+  @@map("serviceable_areas")
 }

@@ -11,4 +11,9 @@ export interface FareEstimate {
   totalFare: number;
   minimumFareApplied: boolean;
   currency: string;
+  distanceFare?: number;
+  timeFare?: number;
+  distanceKm?: number;
+  durationMinutes?: number;
+  discount?: number;
 }

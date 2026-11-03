@@ -120,12 +120,37 @@ export class AuthService {
     await this.prisma.refreshToken.deleteMany({
       where: { userId, tokenHash: tokenHash },
     });
+    await this.cleanupDriverOnLogout(userId);
   }
 
   async logoutAll(userId: string): Promise<void> {
     await this.prisma.refreshToken.deleteMany({
       where: { userId },
     });
+    await this.cleanupDriverOnLogout(userId);
+  }
+
+  private async cleanupDriverOnLogout(userId: string): Promise<void> {
+    try {
+      if (!this.prisma?.driver) return;
+      const driver = await this.prisma.driver.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      if (driver) {
+        await this.prisma.driver.update({
+          where: { id: driver.id },
+          data: { status: 'OFFLINE', isAvailable: false },
+        });
+        const client = this.redisService.client;
+        await client.zrem('drivers:online', driver.id);
+        await client.del(`driver:location:${driver.id}`);
+        await client.del(`ws:client:${userId}`);
+        this.logger.log(`Driver ${driver.id} automatically marked OFFLINE on logout`);
+      }
+    } catch (err) {
+      this.logger.error(`Error cleaning up driver on logout: ${err}`);
+    }
   }
 
   private generateAccessToken(user: any): string {

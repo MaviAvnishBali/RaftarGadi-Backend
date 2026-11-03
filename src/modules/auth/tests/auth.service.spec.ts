@@ -76,7 +76,7 @@ describe('AuthService', () => {
 
   describe('verifyOtp', () => {
     const phone = '9999999999';
-    const otp = '123456';
+    const otp = '888888';
     const mockUser = { id: 'u1', phone, role: Role.CUSTOMER, name: 'John' };
 
     it('should throw if max attempts reached', async () => {

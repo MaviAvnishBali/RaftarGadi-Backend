@@ -26,6 +26,7 @@ import { CouponsModule } from './modules/coupons/coupons.module';
 import { SupportModule } from './modules/support/support.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ServiceableAreasModule } from './modules/serviceable-areas/serviceable-areas.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -116,6 +117,7 @@ import { JobsModule } from './jobs/jobs.module';
     SupportModule,
     ReportsModule,
     AdminModule,
+    ServiceableAreasModule,
 
     // Background jobs
     JobsModule,

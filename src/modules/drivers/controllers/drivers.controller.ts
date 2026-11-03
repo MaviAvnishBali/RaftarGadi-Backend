@@ -6,6 +6,7 @@ import { UpdateDriverDto } from '../dto/update-driver.dto';
 import { UploadDocumentDto } from '../dto/upload-document.dto';
 import { DriverQueryDto } from '../dto/driver-query.dto';
 import { VerifyLicenseDto } from '../dto/verify-license.dto';
+import { SubmitKycDto } from '../dto/submit-kyc.dto';
 import { Roles, Permissions, CurrentUser } from '../../../common/decorators';
 import { Role, Permission } from '../../../common/enums';
 
@@ -29,6 +30,13 @@ export class DriversController {
     return this.driversService.getProfile(userId);
   }
 
+  @Get('dashboard')
+  @Roles(Role.DRIVER)
+  @ApiOperation({ summary: 'Get driver home dashboard data' })
+  getDashboard(@CurrentUser('sub') userId: string) {
+    return this.driversService.getDashboard(userId);
+  }
+
   @Patch('profile')
   @Roles(Role.DRIVER)
   @ApiOperation({ summary: 'Update driver profile' })
@@ -39,17 +47,15 @@ export class DriversController {
   @Post('go-online')
   @Roles(Role.DRIVER)
   @ApiOperation({ summary: 'Go online' })
-  async goOnline(@CurrentUser('sub') driverId: string) {
-    await this.driversService.goOnline(driverId);
-    return { success: true };
+  async goOnline(@CurrentUser('sub') userId: string) {
+    return this.driversService.goOnline(userId);
   }
 
   @Post('go-offline')
   @Roles(Role.DRIVER)
   @ApiOperation({ summary: 'Go offline' })
-  async goOffline(@CurrentUser('sub') driverId: string) {
-    await this.driversService.goOffline(driverId);
-    return { success: true };
+  async goOffline(@CurrentUser('sub') userId: string) {
+    return this.driversService.goOffline(userId);
   }
 
   @Post('documents')
@@ -66,22 +72,29 @@ export class DriversController {
     return this.driversService.verifyAndSaveLicense(userId, dto.licenseNumber);
   }
 
+  @Post('kyc-details')
+  @Roles(Role.DRIVER)
+  @ApiOperation({ summary: 'Submit driving license and Aadhaar details for KYC' })
+  submitKyc(@CurrentUser('sub') userId: string, @Body() dto: SubmitKycDto) {
+    return this.driversService.submitKycDetails(userId, dto);
+  }
+
   @Get()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'List all drivers' })
   findAll(@Query() query: DriverQueryDto) {
     return this.driversService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get driver by id' })
   findById(@Param('id') id: string) {
     return this.driversService.findById(id);
   }
 
   @Post(':id/approve')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Permissions(Permission.DRIVER_APPROVE)
   @ApiOperation({ summary: 'Approve driver KYC' })
   approveDriver(@Param('id') id: string) {
@@ -89,7 +102,7 @@ export class DriversController {
   }
 
   @Post(':id/suspend')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Permissions(Permission.DRIVER_SUSPEND)
   @ApiOperation({ summary: 'Suspend driver' })
   suspendDriver(@Param('id') id: string, @Body('reason') reason: string) {

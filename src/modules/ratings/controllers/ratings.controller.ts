@@ -13,7 +13,7 @@ export class RatingsController {
   constructor(private readonly ratingsService: RatingsService) {}
 
   @Post()
-  @Roles(Role.CUSTOMER)
+  @Roles(Role.CUSTOMER, Role.DRIVER, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create a rating for a booking' })
   async createRating(@CurrentUser() user: any, @Body() dto: CreateRatingDto) {
     return this.ratingsService.createRating(user.sub, dto);

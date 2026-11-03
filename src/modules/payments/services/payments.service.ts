@@ -7,11 +7,17 @@ import { WebhookPayloadDto } from '../dto/webhook-payload.dto';
 import { AppException } from '../../../common/exceptions/app.exception';
 import { PaymentQueryDto } from '../dto/payment-query.dto';
 
+import * as crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../../database/prisma.service';
+
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly paymentsRepo: PaymentsRepository,
     private readonly paymentGateway: MockPaymentGateway,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
 
   private generateReference(): string {
@@ -20,7 +26,15 @@ export class PaymentsService {
 
   async initiatePayment(bookingId: string, method: PaymentMethod, idempotencyKey?: string) {
     const reference = this.generateReference();
-    const mockAmount = 100.0;
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+    if (!booking) {
+      throw AppException.notFound('Booking not found');
+    }
+
+    const amount = Number(booking.finalFare || booking.estimatedFare || 100.0);
 
     let status: PaymentRecordStatus = PaymentRecordStatus.INITIATED;
     let orderData = null;
@@ -28,14 +42,14 @@ export class PaymentsService {
     if (method === PaymentMethod.CASH) {
       status = PaymentRecordStatus.SUCCESS;
     } else {
-      orderData = await this.paymentGateway.createOrder(mockAmount, reference);
+      orderData = await this.paymentGateway.createOrder(amount, reference);
     }
 
     const payment = await this.paymentsRepo.createPayment({
       bookingId,
       method,
       status,
-      amount: mockAmount,
+      amount,
       paymentReference: reference,
       gatewayTransactionId: orderData?.orderId,
       idempotencyKey,
@@ -45,7 +59,25 @@ export class PaymentsService {
   }
 
   async processWebhook(payload: WebhookPayloadDto) {
-    if (payload.signature !== 'valid-signature') {
+    const webhookSecret = this.configService.get<string>(
+      'PAYMENT_WEBHOOK_SECRET',
+      'raftargadi_secure_webhook_secret_2026',
+    );
+
+    const dataToSign = `${payload.orderId}|${payload.transactionId}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(dataToSign)
+      .digest('hex');
+
+    const providedBuffer = Buffer.from(payload.signature || '');
+    const expectedBuffer = Buffer.from(expectedSignature);
+
+    const isMatch =
+      providedBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+
+    if (!isMatch) {
       throw new AppException('BAD_REQUEST', 'Invalid webhook signature', 400);
     }
 
@@ -59,7 +91,12 @@ export class PaymentsService {
         status: PaymentRecordStatus.SUCCESS,
         gatewayTransactionId: payload.transactionId,
       });
-      // Emit event to transition booking to COMPLETED here
+
+      // Update booking paymentStatus upon verified settlement
+      await this.prisma.booking.update({
+        where: { id: payment.bookingId },
+        data: { paymentStatus: 'SUCCESS' },
+      });
     } else {
       await this.paymentsRepo.updatePayment(payment.id, {
         status: PaymentRecordStatus.FAILED,

@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterVehicleDto {
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   vehicleTypeId!: string;
 
@@ -16,6 +16,11 @@ export class RegisterVehicleDto {
   @IsString()
   @IsOptional()
   model?: string;
+
+  @ApiPropertyOptional({ enum: ['OPEN', 'CLOSED_CONTAINER', 'TARPAULIN'], example: 'OPEN' })
+  @IsString()
+  @IsOptional()
+  bodyType?: string;
 
   @ApiPropertyOptional()
   @IsString()

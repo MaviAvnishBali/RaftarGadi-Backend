@@ -24,6 +24,11 @@ describe('WalletsService', () => {
 
   const mockPrismaService = {
     $transaction: jest.fn((callback) => callback(mockPrismaTx)),
+    driver: {
+      findUnique: jest.fn().mockImplementation(({ where }) => {
+        return Promise.resolve({ id: where.id || 'driver-123', userId: where.userId || 'user-123' });
+      }),
+    },
     driverWallet: {
       update: jest.fn(),
     },
@@ -35,6 +40,8 @@ describe('WalletsService', () => {
   const mockPrismaTx = {
     driverWallet: {
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: jest.fn().mockResolvedValue({ id: 'wallet-123', balance: 50 }),
     },
     walletTransaction: {
       create: jest.fn(),
@@ -112,22 +119,23 @@ describe('WalletsService', () => {
   });
 
   describe('processWithdrawal', () => {
-    it('should fail with insufficient balance', async () => {
-      mockWalletsRepository.getWalletByDriverId.mockResolvedValueOnce(mockWallet); // balance is 100
+    it('should fail with insufficient balance or concurrent lock failure', async () => {
+      mockWalletsRepository.getWalletByDriverId.mockResolvedValueOnce(mockWallet);
+      mockPrismaTx.driverWallet.updateMany.mockResolvedValueOnce({ count: 0 });
 
       await expect(service.processWithdrawal('driver-123', 150)).rejects.toThrow(AppException);
-      expect(mockPrismaTx.driverWallet.update).not.toHaveBeenCalled();
     });
 
     it('should succeed with sufficient balance', async () => {
       mockWalletsRepository.getWalletByDriverId.mockResolvedValueOnce(mockWallet);
-      mockPrismaTx.driverWallet.update.mockResolvedValueOnce({ ...mockWallet, balance: 50 });
+      mockPrismaTx.driverWallet.updateMany.mockResolvedValueOnce({ count: 1 });
+      mockPrismaTx.driverWallet.findUnique.mockResolvedValueOnce({ ...mockWallet, balance: 50 });
       mockPrismaTx.walletTransaction.create.mockResolvedValueOnce({ id: 'tx-3' });
 
       await service.processWithdrawal('driver-123', 50);
 
-      expect(mockPrismaTx.driverWallet.update).toHaveBeenCalledWith({
-        where: { id: mockWallet.id },
+      expect(mockPrismaTx.driverWallet.updateMany).toHaveBeenCalledWith({
+        where: { id: mockWallet.id, balance: { gte: 50 } },
         data: {
           balance: { decrement: 50 },
           totalWithdrawn: { increment: 50 },

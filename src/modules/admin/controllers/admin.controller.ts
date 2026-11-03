@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Version, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Version, Req, Body } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles, CurrentUser } from '../../../common/decorators';
 import { Role } from '../../../common/enums';
@@ -57,9 +57,32 @@ export class AdminController {
   }
 
   @Version('1')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Get('audit-logs')
   async getAuditLogs(@Query() query: AuditLogQueryDto) {
     return this.adminService.getAuditLogs(query);
+  }
+
+  @Version('1')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Post('broadcast')
+  async broadcast(
+    @Body() dto: { title: string; body: string; target?: string },
+    @CurrentUser() user: any,
+    @Req() req: any,
+  ) {
+    const result = await this.adminService.broadcastNotification(dto);
+    await this.adminService.auditLog(
+      user.id,
+      user.role,
+      'BROADCAST_NOTIFICATION',
+      'NOTIFICATION',
+      'broadcast',
+      undefined,
+      dto,
+      req.ip,
+      req.headers['user-agent'],
+    );
+    return result;
   }
 }

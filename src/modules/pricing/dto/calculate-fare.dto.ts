@@ -2,19 +2,32 @@ import { IsString, IsNumber, IsOptional, Min, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CalculateFareDto {
-  @ApiProperty({ description: 'Vehicle Type ID (UUID)' })
-  @IsUUID()
-  vehicleTypeId!: string;
+  @ApiPropertyOptional({ description: 'Vehicle Type ID (UUID)' })
+  @IsString()
+  @IsOptional()
+  vehicleTypeId?: string;
+
+  @ApiPropertyOptional({ description: 'Vehicle Type name (e.g. bike, auto, miniTruck)' })
+  @IsString()
+  @IsOptional()
+  vehicleType?: string;
 
   @ApiProperty({ description: 'Distance in kilometers', minimum: 0 })
   @IsNumber()
   @Min(0)
   distanceKm!: number;
 
-  @ApiProperty({ description: 'Duration in minutes', minimum: 0 })
+  @ApiPropertyOptional({ description: 'Duration in minutes', minimum: 0 })
   @IsNumber()
   @Min(0)
-  durationMin!: number;
+  @IsOptional()
+  durationMin?: number;
+
+  @ApiPropertyOptional({ description: 'Duration in minutes (alias)' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  durationMinutes?: number;
 
   @ApiPropertyOptional({ description: 'City name', default: 'default' })
   @IsString()

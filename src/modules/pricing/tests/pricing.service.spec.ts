@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PricingService } from '../services/pricing.service';
 import { PricingRepository } from '../repositories/pricing.repository';
+import { PrismaService } from '../../../database/prisma.service';
 
 describe('PricingService', () => {
   let service: PricingService;
@@ -8,6 +9,12 @@ describe('PricingService', () => {
 
   const mockPricingRepository = {
     getActiveRule: jest.fn(),
+  };
+
+  const mockPrismaService = {
+    vehicleType: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'mock-uuid', name: '2-Wheeler' }),
+    },
   };
 
   const mockRule = {
@@ -22,7 +29,11 @@ describe('PricingService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [PricingService, { provide: PricingRepository, useValue: mockPricingRepository }],
+      providers: [
+        PricingService,
+        { provide: PricingRepository, useValue: mockPricingRepository },
+        { provide: PrismaService, useValue: mockPrismaService },
+      ],
     }).compile();
 
     service = module.get<PricingService>(PricingService);

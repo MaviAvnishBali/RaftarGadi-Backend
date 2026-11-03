@@ -58,10 +58,11 @@ export class PricingController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Set surge multiplier' })
   async setSurge(
-    @Body('vehicleTypeId') vehicleTypeId: string,
     @Body('multiplier') multiplier: number,
+    @Body('vehicleTypeId') vehicleTypeId?: string,
+    @Body('areaId') areaId?: string,
   ) {
     await this.pricingService.setSurge(vehicleTypeId, multiplier);
-    return { success: true };
+    return { success: true, multiplier, vehicleTypeId, areaId };
   }
 }

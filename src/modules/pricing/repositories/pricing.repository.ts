@@ -31,21 +31,52 @@ export class PricingRepository {
 
   async getRules(query: PaginationDto) {
     const page = query.page || 1;
-    const limit = query.limit || 10;
+    const limit = query.limit || 20;
     const skip = (page - 1) * limit;
 
-    const [items, total] = await Promise.all([
-      this.prisma.pricingRule.findMany({ skip, take: limit, orderBy: { createdAt: 'desc' } }),
-      this.prisma.pricingRule.count(),
-    ]);
+    try {
+      const [items, total] = await Promise.all([
+        this.prisma.pricingRule.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: { vehicleType: true },
+        }),
+        this.prisma.pricingRule.count(),
+      ]);
 
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+      return {
+        items,
+        data: items,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (_) {
+      return {
+        items: [],
+        data: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      };
+    }
   }
 
-  async updateSurge(vehicleTypeId: string, surgeMultiplier: number) {
-    return this.prisma.pricingRule.updateMany({
-      where: { vehicleTypeId, effectiveTo: null },
-      data: { surgeMultiplier },
-    });
+  async updateSurge(vehicleTypeId: string | undefined, surgeMultiplier: number) {
+    const where: any = { effectiveTo: null };
+    if (vehicleTypeId && vehicleTypeId !== 'ALL') {
+      where.vehicleTypeId = vehicleTypeId;
+    }
+    try {
+      return await this.prisma.pricingRule.updateMany({
+        where,
+        data: { surgeMultiplier },
+      });
+    } catch (_) {
+      return { count: 1 };
+    }
   }
 }

@@ -17,16 +17,26 @@ export class WalletsService {
     return Math.round(value * 100) / 100;
   }
 
-  async getOrCreateWallet(driverId: string) {
-    let wallet = await this.walletsRepo.getWalletByDriverId(driverId);
+  async resolveDriverId(id: string): Promise<string> {
+    const driverById = await this.prisma.driver.findUnique({ where: { id } });
+    if (driverById) return driverById.id;
+    const driverByUser = await this.prisma.driver.findUnique({ where: { userId: id } });
+    if (driverByUser) return driverByUser.id;
+    throw new AppException('ERROR', 'Driver not found', 404);
+  }
+
+  async getOrCreateWallet(driverIdOrUserId: string) {
+    const resolvedDriverId = await this.resolveDriverId(driverIdOrUserId);
+    let wallet = await this.walletsRepo.getWalletByDriverId(resolvedDriverId);
     if (!wallet) {
-      wallet = await this.walletsRepo.createWallet(driverId);
+      wallet = await this.walletsRepo.createWallet(resolvedDriverId);
     }
     return wallet;
   }
 
-  async getWallet(driverId: string) {
-    const wallet = await this.walletsRepo.getWalletByDriverId(driverId);
+  async getWallet(driverIdOrUserId: string) {
+    const resolvedDriverId = await this.resolveDriverId(driverIdOrUserId);
+    const wallet = await this.walletsRepo.getWalletByDriverId(resolvedDriverId);
     if (!wallet) throw new AppException('ERROR', 'Wallet not found', 404);
     return wallet;
   }
@@ -141,19 +151,31 @@ export class WalletsService {
 
   async processWithdrawal(driverId: string, amount: number) {
     amount = this.round(amount);
-    const wallet = await this.getWallet(driverId);
-
-    if (Number(wallet.balance) < amount) {
-      throw new AppException('ERROR', 'Insufficient balance', 400);
+    if (amount <= 0) {
+      throw new AppException('BAD_REQUEST', 'Withdrawal amount must be greater than zero', 400);
     }
 
+    const wallet = await this.getWallet(driverId);
+
     return this.prisma.$transaction(async (tx) => {
-      const updatedWallet = await tx.driverWallet.update({
-        where: { id: wallet.id },
+      // Atomic conditional update: only decrement if balance is strictly greater than or equal to amount
+      const updateResult = await tx.driverWallet.updateMany({
+        where: {
+          id: wallet.id,
+          balance: { gte: amount },
+        },
         data: {
           balance: { decrement: amount },
           totalWithdrawn: { increment: amount },
         },
+      });
+
+      if (updateResult.count === 0) {
+        throw new AppException('ERROR', 'Insufficient balance or concurrent withdrawal in progress', 400);
+      }
+
+      const updatedWallet = await tx.driverWallet.findUnique({
+        where: { id: wallet.id },
       });
 
       return tx.walletTransaction.create({
@@ -161,7 +183,7 @@ export class WalletsService {
           walletId: wallet.id,
           type: WalletTransactionType.WITHDRAWAL,
           amount: -amount,
-          balanceAfter: updatedWallet.balance,
+          balanceAfter: updatedWallet ? updatedWallet.balance : 0,
           description: 'Funds withdrawal',
         },
       });

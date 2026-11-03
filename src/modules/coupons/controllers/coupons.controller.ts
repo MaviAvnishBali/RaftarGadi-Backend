@@ -15,14 +15,14 @@ export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 
   @Post('validate')
-  @Roles(Role.CUSTOMER)
+  @Roles(Role.CUSTOMER, Role.DRIVER, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Validate a coupon' })
   async validateCoupon(@Body() dto: ValidateCouponDto) {
     return this.couponsService.validateCoupon(dto.code, dto.bookingAmount);
   }
 
   @Get('active')
-  @Roles(Role.CUSTOMER)
+  @Roles(Role.CUSTOMER, Role.DRIVER, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'List active coupons' })
   async getActiveCoupons() {
     return this.couponsService.getActiveCoupons();
