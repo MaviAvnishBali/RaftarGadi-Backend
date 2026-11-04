@@ -59,14 +59,16 @@ export class PaymentsService {
   }
 
   async processWebhook(payload: WebhookPayloadDto) {
-    const webhookSecret = this.configService.get<string>(
-      'PAYMENT_WEBHOOK_SECRET',
-      'raftargadi_secure_webhook_secret_2026',
-    );
+    const isProd = process.env.NODE_ENV === 'production';
+    const webhookSecret = this.configService.get<string>('PAYMENT_WEBHOOK_SECRET');
+    if (isProd && !webhookSecret) {
+      throw new AppException('INTERNAL_SERVER_ERROR', 'Payment webhook secret must be configured in production', 500);
+    }
+    const secretKey = webhookSecret || 'raftargadi_secure_webhook_secret_2026';
 
     const dataToSign = `${payload.orderId}|${payload.transactionId}`;
     const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
+      .createHmac('sha256', secretKey)
       .update(dataToSign)
       .digest('hex');
 

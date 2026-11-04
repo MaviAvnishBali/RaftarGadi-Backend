@@ -308,8 +308,7 @@ export class LocationGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     };
 
     if (isNaN(pickupLat) || isNaN(pickupLng)) {
-      this.logger.warn(`Invalid pickup coordinates for booking ${bookingId}; broadcasting to all drivers`);
-      this.server.emit('booking:request', requestPayload);
+      this.logger.warn(`Invalid pickup coordinates for booking ${bookingId}; skipping dispatch`);
       return;
     }
 

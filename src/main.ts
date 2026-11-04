@@ -92,8 +92,8 @@ async function bootstrap(): Promise<void> {
     },
   });
 
-  // Request body size limit
-  app.use(require('express').json({ limit: '10mb' }));
+  // Request body size limit (tightened to 1mb to prevent memory exhaustion / DoS)
+  app.use(require('express').json({ limit: '1mb' }));
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);

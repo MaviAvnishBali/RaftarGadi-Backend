@@ -36,6 +36,8 @@ export class LocationsController {
       driver.id,
       dto.latitude,
       dto.longitude,
+      dto.heading,
+      dto.speed,
     );
 
     if (dto.bookingId) {
