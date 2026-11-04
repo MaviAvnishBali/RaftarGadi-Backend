@@ -33,10 +33,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const body = exceptionResponse as ErrorBody;
+        const body = exceptionResponse as any;
         errorCode = body.code || this.getDefaultErrorCode(statusCode);
-        message = body.message || exception.message;
-        details = body.details;
+        if (Array.isArray(body.message)) {
+          message = body.message.join('; ');
+          details = body.message;
+        } else {
+          message = body.message || exception.message;
+          details = body.details;
+        }
       } else {
         errorCode = this.getDefaultErrorCode(statusCode);
         message = typeof exceptionResponse === 'string' ? exceptionResponse : exception.message;
@@ -65,6 +70,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const errorResponse = {
       success: false,
+      code: errorCode,
+      message,
       error: {
         code: errorCode,
         message,

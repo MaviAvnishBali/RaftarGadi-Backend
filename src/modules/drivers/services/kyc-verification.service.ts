@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { AppException } from '../../../common/exceptions/app.exception';
 import { SubmitKycDto } from '../dto/submit-kyc.dto';
 
@@ -30,6 +31,45 @@ export class KycVerificationService {
     const cleanNumber = aadhaarNumber.replace(/[\s-]/g, '');
     if (cleanNumber.length < 4) return cleanNumber;
     return 'X'.repeat(cleanNumber.length - 4) + cleanNumber.slice(-4);
+  }
+
+  /**
+   * Encrypts raw Aadhaar using AES-256-GCM for UIDAI statutory compliance.
+   */
+  encryptAadhaar(rawAadhaar: string): string {
+    const key = crypto.scryptSync(
+      process.env.AADHAAR_VAULT_SECRET || 'raftargadi_default_aadhaar_vault_secret_key_2026',
+      'raftargadi_aadhaar_salt',
+      32,
+    );
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    let encrypted = cipher.update(rawAadhaar, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag().toString('hex');
+    return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+  }
+
+  /**
+   * Decrypts encrypted Aadhaar from the secure vault.
+   */
+  decryptAadhaar(encryptedAadhaar: string): string {
+    try {
+      const [ivHex, authTagHex, encryptedText] = encryptedAadhaar.split(':');
+      if (!ivHex || !authTagHex || !encryptedText) return encryptedAadhaar;
+      const key = crypto.scryptSync(
+        process.env.AADHAAR_VAULT_SECRET || 'raftargadi_default_aadhaar_vault_secret_key_2026',
+        'raftargadi_aadhaar_salt',
+        32,
+      );
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+      decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch {
+      return encryptedAadhaar;
+    }
   }
 
   /**

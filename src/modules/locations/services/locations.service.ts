@@ -171,16 +171,63 @@ export class LocationsService {
     heading?: number,
     speed?: number,
   ): Promise<void> {
-    await this.prisma.bookingLocation.create({
-      data: {
+    const client = this.redisService.client;
+    const now = Date.now();
+
+    // 1. Instantly buffer in Redis for zero-latency tracking
+    try {
+      await client.set(
+        `booking:${bookingId}:live_location`,
+        JSON.stringify({ lat, lng, heading: heading ?? 0, speed: speed ?? 0, timestamp: now }),
+        'EX',
+        86400,
+      );
+
+      // Append to telemetry stream
+      await client.xadd(
+        'stream:telemetry',
+        '*',
+        'bookingId',
         bookingId,
-        latitude: lat,
-        longitude: lng,
-        heading,
-        speed,
-        recordedAt: new Date(),
-      },
-    });
+        'lat',
+        lat.toString(),
+        'lng',
+        lng.toString(),
+        'heading',
+        (heading ?? 0).toString(),
+        'speed',
+        (speed ?? 0).toString(),
+        'recordedAt',
+        now.toString(),
+      );
+    } catch (_) {
+      // Non-blocking Redis fallback
+    }
+
+    // 2. Downsampled persistence to PostgreSQL (max 1 write per 15s to prevent pool exhaustion)
+    let shouldSaveToPg = true;
+    try {
+      const throttleKey = `booking:${bookingId}:last_pg_save`;
+      const throttled = await client.get(throttleKey);
+      if (throttled) {
+        shouldSaveToPg = false;
+      } else {
+        await client.set(throttleKey, '1', 'EX', 15);
+      }
+    } catch (_) {}
+
+    if (shouldSaveToPg) {
+      await this.prisma.bookingLocation.create({
+        data: {
+          bookingId,
+          latitude: lat,
+          longitude: lng,
+          heading: heading ?? 0,
+          speed: speed ?? 0,
+          recordedAt: new Date(),
+        },
+      });
+    }
   }
 
   async getBookingLiveTracking(bookingId: string) {
@@ -209,9 +256,9 @@ export class LocationsService {
         liveLocation = {
           latitude: redisLoc.latitude,
           longitude: redisLoc.longitude,
-          heading: 0,
-          speed: 0,
-          updatedAt: new Date(),
+          heading: redisLoc.heading ?? 0,
+          speed: redisLoc.speed ?? 0,
+          updatedAt: redisLoc.updatedAt ?? new Date(),
         };
       } else {
         const lastDbLoc = await this.prisma.bookingLocation.findFirst({

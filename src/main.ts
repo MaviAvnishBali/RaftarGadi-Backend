@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { RedisIoAdapter } from './config/redis-io.adapter';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -94,6 +96,17 @@ async function bootstrap(): Promise<void> {
 
   // Request body size limit (tightened to 1mb to prevent memory exhaustion / DoS)
   app.use(require('express').json({ limit: '1mb' }));
+
+  // Global Exception Filter
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Clustered Redis WebSocket Adapter
+  const redisIoAdapter = new RedisIoAdapter(app);
+  const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
+  const redisPort = configService.get<number>('REDIS_PORT', 6379);
+  const redisPassword = configService.get<string>('REDIS_PASSWORD');
+  await redisIoAdapter.connectToRedis(redisHost, redisPort, redisPassword);
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
