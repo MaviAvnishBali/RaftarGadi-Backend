@@ -33,7 +33,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "tunnel": "/home/hp/bin/devtunnel host fancy-horse-7ndk27j",
-    "tunnel:status": "/home/hp/bin/devtunnel show fancy-horse-7ndk27j"
+    "tunnel:status": "/home/hp/bin/devtunnel show fancy-horse-7ndk27j",
+    "docs:generate": "python3 scripts/generate_api_docs.py"
   },
   "dependencies": {
     "@nestjs/bullmq": "^10.2.0",
