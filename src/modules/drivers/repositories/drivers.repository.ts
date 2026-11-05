@@ -183,4 +183,12 @@ export class DriversRepository {
       activeBooking: activeBooking || incomingBooking,
     };
   }
+
+  async findLastLocation(driverId: string) {
+    return this.prisma.bookingLocation.findFirst({
+      where: { booking: { driverId } },
+      orderBy: { recordedAt: 'desc' },
+    });
+  }
 }
+

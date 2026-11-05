@@ -65,19 +65,48 @@ export class DriversService {
     if (!driver) throw new AppException('ERROR', 'Driver profile not found', 404);
     await this.driversRepo.update(driver.id, { status: DriverStatus.ONLINE, isAvailable: true });
     try {
+      let lat: number | null = null;
+      let lng: number | null = null;
+      let heading = 0;
+      let speed = 0;
+
       const loc = await this.redisService.client.get(`driver:location:${driver.id}`);
       if (loc) {
-        const parsed = JSON.parse(loc);
-        if (parsed.lat && parsed.lng) {
-          await this.redisService.client.geoadd('drivers:online', parsed.lng, parsed.lat, driver.id);
-          parsed.timestamp = Date.now();
-          await this.redisService.client.set(
-            `driver:location:${driver.id}`,
-            JSON.stringify(parsed),
-            'EX',
-            86400,
-          );
+        try {
+          const parsed = JSON.parse(loc);
+          if (parsed.lat && parsed.lng) {
+            lat = Number(parsed.lat);
+            lng = Number(parsed.lng);
+            heading = parsed.heading ?? 0;
+            speed = parsed.speed ?? 0;
+          }
+        } catch (_) {}
+      }
+
+      if (lat === null || lng === null) {
+        const lastLoc = await this.driversRepo.findLastLocation(driver.id);
+        if (lastLoc) {
+          lat = lastLoc.latitude;
+          lng = lastLoc.longitude;
+          heading = lastLoc.heading ?? 0;
+          speed = lastLoc.speed ?? 0;
         }
+      }
+
+      if (lat !== null && lng !== null) {
+        await this.redisService.client.geoadd('drivers:online', lng, lat, driver.id);
+        await this.redisService.client.set(
+          `driver:location:${driver.id}`,
+          JSON.stringify({
+            lat,
+            lng,
+            heading,
+            speed,
+            timestamp: Date.now(),
+          }),
+          'EX',
+          86400,
+        );
       }
     } catch (err) {
       this.logger.error(`Failed to restore driver ${driver.id} to Redis on goOnline: ${err}`);
@@ -93,7 +122,8 @@ export class DriversService {
     await this.driversRepo.update(driver.id, { status: DriverStatus.OFFLINE, isAvailable: false });
     try {
       await this.redisService.client.zrem('drivers:online', driver.id);
-      await this.redisService.client.del(`driver:location:${driver.id}`);
+      // Retain last known coordinates in driver:location:${driver.id} with 24hr TTL
+      // so goOnline can immediately re-publish to geospatial index
     } catch (err) {
       this.logger.error(`Failed to remove driver ${driver.id} from Redis on goOffline: ${err}`);
     }

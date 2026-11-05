@@ -362,6 +362,13 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
+      if (targetStatus === 'CANCELLED' && booking.driverId) {
+        await tx.driver.updateMany({
+          where: { id: booking.driverId },
+          data: { isAvailable: true },
+        });
+      }
+
       return result;
     });
 
